@@ -6,20 +6,32 @@ use Illuminate\Database\Eloquent\Model;
 
 class Magic extends Model
 {
+    protected $tables = [
+                            'customers',
+                            'addresses',
+                            'orders',
+                            'payments'
+    ];
     protected $fillable = [
                             'first_name',
                             'last_name',
                             'email',
-                            'street1',
-                            'street2', 
-                            'city', 
-                            'state',
-                            'zip',
-                            'phone',
+                            'address' => [
+                                            'street1',
+                                            'street2', 
+                                            'city', 
+                                            'state',
+                                            'zip',
+                                         ],   
+                            'phone',                            
+                            'payment' => [
+                                            'cc_num', 
+                                            'exp'
+                                         ],
                             'quantity',
                             'total',
-                            'cc_num', 
-                            'exp'
-                ];
+                            'orderDate',
+                            'fulfilled'
+    ];
 }
 

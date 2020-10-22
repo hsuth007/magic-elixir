@@ -6,6 +6,8 @@ use App\Magic;
 //use App\Models\Magic;
 use App\Http\Resources\Magic as MagicResource;
 use Illuminate\Http\Request;
+use \Illuminate\Support\Facades\DB;
+use \Illuminate\Support\Collection;
 
 class MagicController extends Controller
 {
@@ -14,10 +16,23 @@ class MagicController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    
+    private $magic;
+
+
     public function index()
     {
-        $magic = Magic::all();
-        return response()->json($magic);
+//        $this->magic = DB::table(DB::raw('customers, customer_addresses, addresses, orders, payments'))
+//                         ->leftJoin('cid', 'customer_id.street1');
+        $this->magic = DB::table('customers')
+                         ->join('customer_addresses','customers.cid', '=', 'customer_addresses.customer_id')
+                         ->join('addresses', 'customers.cid', '=', 'addresses.customer_id')
+                         ->join('orders', 'customers.cid', '=', 'orders.customer_id')
+                         ->join('payments', 'customers.cid', '=', 'payments.customer_id')
+                         ->select('customers.first_name', 'customers.last_name', 'customers.email')
+                         ->select('addresses.*', 'orders.*', 'payments.*')
+                         ->get();
+        return response()->json($this->magic);
     }
 
     /**
@@ -38,21 +53,29 @@ class MagicController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $rules = [
             'first_name'    => 'required|max:64',
             'last_name'     => 'required|max:64',
             'email'         => 'required|max:256',
-            'street1'       => 'required',
-            'city'          => 'required',
-            'state'         => 'required',
-            'zip'           => 'required',
+            'address'       => [
+                                'street1'       => 'required',
+                                'street2'       => 'required',
+                                'city'          => 'required',
+                                'state'         => 'required',
+                                'zip'           => 'required'
+                               ], 
             'phone'         => 'required',
+            'payment'       => [
+                                'cc_num'        => 'required',
+                                'exp'           => 'required'
+                               ],
             'quantity'      => 'required',
-            'cc_num'        => 'required',
-            'exp'           => 'required'
-        ]);
-        $magic = \App\Magic::create($request->all());
-        return response()->json(['message' => 'id', 'magic' => $magic]);
+            'total'         => 'required'
+        ];
+        $messages = [];
+        $request->validate($rules);
+        $this->magic = Magic::create($request->all());
+        return response()->json(['message' => 'id', 'magic' => $this->magic]);
     }
 
     /**
@@ -61,9 +84,17 @@ class MagicController extends Controller
      * @param  \App\Models\Magic  $magic
      * @return \Illuminate\Http\Response
      */
-    public function show(Magic $magic)
-    {
-        return $magic;
+    public function show($id)
+    {   
+        $result = DB::table('customers')
+                    ->join('customer_addresses','customers.' + $id, '=', 'customer_addresses.customer_id')
+                    ->join('addresses', 'customers.' + $id, '=', 'addresses.customer_id')
+                    ->join('orders', 'customers.' + $id, '=', 'orders.customer_id')
+                    ->join('payments', 'customers.' + $id, '=', 'payments.customer_id')
+                    ->select('customers.first_name', 'customers.last_name', 'customers.email')
+                    ->select('addresses.*', 'orders.*', 'payments.*')
+                    ->get();
+        return response()->json($result);
     }
 
     /**
@@ -95,8 +126,11 @@ class MagicController extends Controller
      * @param  \App\Models\Magic  $magic
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Magic $magic)
+    public function destroy(Magic $id)
     {
-        //
+        $magic = Magic::findOrFail($id);
+        $magic->delete();
+        return response()->json(null, 204);
+
     }
 }
